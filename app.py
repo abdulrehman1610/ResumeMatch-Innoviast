@@ -6,12 +6,14 @@ and card layouts from ResumeMatch-Live-Preview.html.
 
 import time
 import logging
+import textwrap
 import streamlit as st
 
 from core.extraction import extract_resume_text, ExtractionError
 from core.ai_provider import AIProvider, AllProvidersFailedError, AIProviderError
 from core.schema import AnalysisResult
 from core.resume_export import generate_tailored_resume
+from db.logger import log_prompt_call
 import os
 import shutil
 
@@ -437,7 +439,7 @@ def render_navigation_and_hero():
     st.markdown(LIVE_PREVIEW_CSS, unsafe_allow_html=True)
 
     # Sticky Top Bar
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
         <div class="sticky-header">
             <div style="display:flex; align-items:center; gap:12px;">
                 <div class="header-logo-box">⚡</div>
@@ -449,10 +451,10 @@ def render_navigation_and_hero():
                 <span>System Operational</span>
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     # Hero Box
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
         <div class="hero-center">
             <div class="hero-pill">⚡ V2.0 • AI Gap Engine</div>
             <h1 class="hero-main-title">ResumeMatch</h1>
@@ -465,7 +467,7 @@ def render_navigation_and_hero():
                 </div>
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
@@ -477,11 +479,11 @@ def render_input_section():
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("""
+        st.markdown(textwrap.dedent("""
             <div class="input-panel-header">
                 <span>Resume Input</span>
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
         
         input_mode = st.radio(
             "Input Mode",
@@ -508,11 +510,11 @@ def render_input_section():
             )
 
     with col2:
-        st.markdown("""
+        st.markdown(textwrap.dedent("""
             <div class="input-panel-header">
                 <span>Job Description Input</span>
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
         jd_text = st.text_area(
             "Target Job Description",
@@ -585,7 +587,7 @@ def render_overview_tab(result: AnalysisResult):
     col1, col2 = st.columns([1.2, 1.8])
 
     with col1:
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
             <div class="preview-card">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:#94A3B8;">Readiness Score</span>
@@ -602,10 +604,10 @@ def render_overview_tab(result: AnalysisResult):
                     <strong style="color:white;">Rationale:</strong> {result.readiness_rationale}
                 </div>
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
     with col2:
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
             <div class="preview-card-dark">
                 <h3 style="font-size:13px; font-weight:600; color:white; margin:0 0 12px 0;">Executive Summary</h3>
                 <p style="font-size:13px; line-height:1.7; color:#CBD5E1; margin:0;">{result.qualitative_summary}</p>
@@ -615,11 +617,11 @@ def render_overview_tab(result: AnalysisResult):
                     <span style="padding:4px 10px; border-radius:999px; background:#1A1E29; border:1px solid #283042; font-size:11px; color:#94A3B8;">ATS-Aware</span>
                 </div>
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
         if result.experience_assessment:
             ea = result.experience_assessment
-            st.markdown(f"""
+            st.markdown(textwrap.dedent(f"""
                 <div class="preview-card" style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <div style="font-size:11px; text-transform:uppercase; color:#94A3B8;">Seniority Alignment</div>
@@ -632,7 +634,7 @@ def render_overview_tab(result: AnalysisResult):
                         ✓ {ea.alignment_notes}
                     </div>
                 </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
 
 
 def render_skills_tab(result: AnalysisResult):
@@ -643,7 +645,7 @@ def render_skills_tab(result: AnalysisResult):
         st.markdown(f"**Matched Qualifications ({len(result.matched_skills)})**")
         if result.matched_skills:
             html = "".join([f'<span class="chip-matched"><span class="dot-green"></span>{s}</span>' for s in result.matched_skills])
-            st.markdown(html, unsafe_allow_html=True)
+            st.markdown(f'<div>{html}</div>', unsafe_allow_html=True)
         else:
             st.caption("None detected")
 
@@ -651,7 +653,7 @@ def render_skills_tab(result: AnalysisResult):
         st.markdown(f"**Missing Requirements ({len(result.missing_skills)})**")
         if result.missing_skills:
             html = "".join([f'<span class="chip-missing"><span class="dot-amber"></span>{s}</span>' for s in result.missing_skills])
-            st.markdown(html, unsafe_allow_html=True)
+            st.markdown(f'<div>{html}</div>', unsafe_allow_html=True)
         else:
             st.caption("No critical gaps")
 
@@ -661,13 +663,17 @@ def render_skills_tab(result: AnalysisResult):
             matched_html = "".join([f'<span class="chip-matched"><span class="dot-green"></span>{s}</span>' for s in cat.matched])
             missing_html = "".join([f'<span class="chip-missing"><span class="dot-amber"></span>{s}</span>' for s in cat.missing])
 
-            st.markdown(f"""
-                <div class="preview-card" style="padding:16px; margin-bottom:12px;">
-                    <div style="font-size:12px; text-transform:uppercase; font-weight:600; color:#94A3B8; margin-bottom:10px;">{cat.category_name}</div>
-                    {f'<div style="margin-bottom:6px;">{matched_html}</div>' if matched_html else ''}
-                    {f'<div>{missing_html}</div>' if missing_html else ''}
-                </div>
-            """, unsafe_allow_html=True)
+            matched_div = f'<div style="margin-bottom:6px;">{matched_html}</div>' if matched_html else ''
+            missing_div = f'<div>{missing_html}</div>' if missing_html else ''
+
+            card_html = (
+                f'<div class="preview-card" style="padding:16px; margin-bottom:12px;">'
+                f'<div style="font-size:12px; text-transform:uppercase; font-weight:600; color:#94A3B8; margin-bottom:10px;">{cat.category_name}</div>'
+                f'{matched_div}'
+                f'{missing_div}'
+                f'</div>'
+            )
+            st.markdown(card_html, unsafe_allow_html=True)
 
 
 def render_keywords_tab(result: AnalysisResult):
@@ -676,7 +682,7 @@ def render_keywords_tab(result: AnalysisResult):
         st.info("No keyword density data available")
         return
 
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
         <div class="preview-card-dark">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <span style="font-size:14px; font-weight:600; color:white;">Keyword Frequency Matrix</span>
@@ -685,7 +691,7 @@ def render_keywords_tab(result: AnalysisResult):
                     <span style="display:inline-block; width:10px; height:10px; background:#10B981; border-radius:2px; margin-left:10px; margin-right:4px;"></span>Your Resume
                 </span>
             </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     max_val = max(max(kd.jd_count, kd.resume_count, 1) for kd in result.keyword_density)
 
@@ -696,7 +702,7 @@ def render_keywords_tab(result: AnalysisResult):
         badge_bg = "rgba(16, 185, 129, 0.15)" if match_status == "Matched" else ("rgba(245, 158, 11, 0.15)" if match_status == "Partial" else "rgba(239, 68, 68, 0.15)")
         badge_col = "#34D399" if match_status == "Matched" else ("#FBBF24" if match_status == "Partial" else "#FCA5A5")
 
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
             <div style="background:#14171F; border:1px solid #222736; border-radius:10px; padding:12px 14px; margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="font-size:13px; font-weight:600; color:#F8FAFC;">{kd.keyword}</span>
@@ -720,7 +726,7 @@ def render_keywords_tab(result: AnalysisResult):
                     </div>
                 </div>
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -735,37 +741,40 @@ def render_rewrites_tab(result: AnalysisResult):
         conf_pct = int(item.confidence_score * 100)
         sec = item.section if item.section else "Experience"
 
-        st.markdown(f"""
-            <div class="rewrite-card-container">
-                <div class="rewrite-card-header">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:12px; font-weight:600; color:white;">Recommendation #{idx + 1}</span>
-                        <span style="color:#475569;">•</span>
-                        <span style="font-size:11px; color:#94A3B8;">{sec}</span>
-                    </div>
-                    <span style="padding:2px 10px; border-radius:999px; background:rgba(16, 185, 129, 0.1); border:1px solid rgba(16, 185, 129, 0.2); font-size:11px; color:#A7F3D0;">Verified ({conf_pct}% Grounding)</span>
-                </div>
-                <div style="padding:16px;">
-                    {f'<div style="font-size:11px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">Original</div><div style="font-size:12.5px; font-style:italic; color:#94A3B8; border-left:2px solid #222736; padding-left:12px; margin-bottom:12px;">"{item.original_bullet}"</div>' if item.original_bullet else ''}
-                    <div style="font-size:11px; text-transform:uppercase; color:#A5B4FC; margin-bottom:4px;">Suggested</div>
-                    <div class="suggested-box">"{item.suggested_bullet}"</div>
-                    <div style="margin-top:10px; background:#14171F; border:1px solid #222736; border-radius:10px; padding:10px 12px; font-size:11.5px; color:#94A3B8;">
-                        💡 {item.rationale}
-                    </div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        orig_div = f'<div style="font-size:11px; text-transform:uppercase; color:#64748B; margin-bottom:4px;">Original</div><div style="font-size:12.5px; font-style:italic; color:#94A3B8; border-left:2px solid #222736; padding-left:12px; margin-bottom:12px;">"{item.original_bullet}"</div>' if item.original_bullet else ''
+
+        card_html = (
+            f'<div class="rewrite-card-container">'
+            f'<div class="rewrite-card-header">'
+            f'<div style="display:flex; align-items:center; gap:8px;">'
+            f'<span style="font-size:12px; font-weight:600; color:white;">Recommendation #{idx + 1}</span>'
+            f'<span style="color:#475569;">•</span>'
+            f'<span style="font-size:11px; color:#94A3B8;">{sec}</span>'
+            f'</div>'
+            f'<span style="padding:2px 10px; border-radius:999px; background:rgba(16, 185, 129, 0.1); border:1px solid rgba(16, 185, 129, 0.2); font-size:11px; color:#A7F3D0;">Verified ({conf_pct}% Grounding)</span>'
+            f'</div>'
+            f'<div style="padding:16px;">'
+            f'{orig_div}'
+            f'<div style="font-size:11px; text-transform:uppercase; color:#A5B4FC; margin-bottom:4px;">Suggested</div>'
+            f'<div class="suggested-box">"{item.suggested_bullet}"</div>'
+            f'<div style="margin-top:10px; background:#14171F; border:1px solid #222736; border-radius:10px; padding:10px 12px; font-size:11.5px; color:#94A3B8;">'
+            f'💡 {item.rationale}'
+            f'</div>'
+            f'</div>'
+            f'</div>'
+        )
+        st.markdown(card_html, unsafe_allow_html=True)
 
 
 def render_ats_tab(result: AnalysisResult):
     """Render ATS Audit tab."""
     if not result.ats_warnings:
-        st.markdown("""
+        st.markdown(textwrap.dedent("""
             <div class="preview-card-dark">
                 <div style="font-size:13px; font-weight:600; color:#10B981;">✓ Standard Structure Verified</div>
                 <p style="font-size:12.5px; color:#94A3B8; margin-top:4px;">No issues detected for standard ATS parsers.</p>
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
         return
 
     st.markdown(f"**Structural Audit ({len(result.ats_warnings)} findings)**")
@@ -775,7 +784,7 @@ def render_ats_tab(result: AnalysisResult):
         bg_col = "rgba(239, 68, 68, 0.15)" if sev == "HIGH" else ("rgba(245, 158, 11, 0.15)" if sev == "MEDIUM" else "#1E293B")
         txt_col = "#FCA5A5" if sev == "HIGH" else ("#FDE68A" if sev == "MEDIUM" else "#94A3B8")
 
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
             <div class="preview-card-dark" style="display:flex; gap:12px; margin-bottom:12px;">
                 <span style="padding:2px 8px; border-radius:999px; background:{bg_col}; color:{txt_col}; font-size:11px; font-weight:600; height:fit-content;">{sev}</span>
                 <div>
@@ -783,7 +792,7 @@ def render_ats_tab(result: AnalysisResult):
                     <div style="font-size:12.5px; color:#94A3B8; margin-top:4px;">{warn.recommendation}</div>
                 </div>
             </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
 
 def render_export_tab(result: AnalysisResult):
@@ -893,12 +902,12 @@ def main():
         render_results(st.session_state["last_result"])
 
     # Footer
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
         <div class="footer-bar">
             <span>© ResumeMatch • AI Gap Engine V2.0 • Evidence-grounded optimization</span>
             <span style="color:#10B981;">● Advisory Mode Active</span>
         </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
